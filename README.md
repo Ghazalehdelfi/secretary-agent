@@ -1,3 +1,4 @@
+# 🎯🚀 Secretary Agent, the future of communication prototype with A2A and ADK
 This project demonstrates how to build, serve, and interact with multiple A2A agents:
 1. **OrchestratorAgent** – Central coordinator that routes requests to appropriate child agents
 2. **CalendarAgent** – Manages Google Calendar operations and meeting scheduling
