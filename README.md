@@ -1,136 +1,138 @@
-# 🧠 A2A Agent Samples – Powered by Google's Agent-to-Agent Protocol
+# 🤖 TellTimeAgent & Multi-Agent Demo – A2A with Google ADK
 
-Welcome to the `a2a_samples` repository! This project contains multiple implementations of AI agents using [Google's A2A (Agent-to-Agent)](https://github.com/google/A2A) protocol.
+Welcome to **TellTimeAgent** and the **Multi-Agent** demo — a minimal Agent2Agent (A2A) implementation using Google's [Agent Development Kit (ADK)](https://github.com/google/agent-development-kit).
 
-These implementations demonstrate how to:
+This example demonstrates how to build, serve, and interact with three A2A agents:
+1. **TellTimeAgent** – replies with the current time.
+2. **GreetingAgent** – fetches the time and generates a poetic greeting.
+3. **OrchestratorAgent** – routes requests to the appropriate child agent.
 
-* Set up and run A2A-compliant servers and clients
-* Use discovery endpoints and standardized task formats
-* Integrate with Google's ADK (Agent Development Kit)
-
-We plan to continuously add more versions to illustrate various approaches and frameworks.
+All of them work together seamlessly via A2A discovery and JSON-RPC.
 
 ---
 
-## 📁 Folder Structure
+## 📦 Project Structure
 
 ```bash
-a2a_samples/
-├── version_1_simple/        # Basic implementation using Flask
-├── version_2_adk_agent/     # Advanced agent built using Google ADK + Gemini
-├── version_3_multi_agent/   # Multi-agent orchestration example
-├── version_4_multi_agent_mcp/ # Distributed multi-agent with A2A + MCP integration
-├── version_4p01_with_vision_agent/ # Adds Gemini-based VisionAgent to version_4 architecture
-├── version_5_a2a_sdk/       # Minimal A2A PYTHON SDK setup with streaming, LangChain + Gemini
-├── version_6_docker_vision_agent/ # Dockerized Gemini Vision Agent deployable to Google Cloud
+version_3_multi_agent/
+├── .env                         # Your GOOGLE_API_KEY (not committed)
+├── pyproject.toml              # Dependency config
+├── README.md                   # You are reading it!
+├── app/
+│   └── cmd/
+│       └── cmd.py              # CLI to interact with the OrchestratorAgent
+├── agents/
+│   ├── tell_time_agent/
+│   │   ├── __main__.py         # Starts TellTimeAgent server
+│   │   ├── agent.py            # Gemini-based time agent
+│   │   └── task_manager.py     # In-memory task handler for TellTimeAgent
+│   ├── greeting_agent/
+│   │   ├── __main__.py         # Starts GreetingAgent server
+│   │   ├── agent.py            # Orchestrator that calls TellTimeAgent + LLM greeting
+│   │   └── task_manager.py     # Task handler for GreetingAgent
+│   └── host_agent/
+│       ├── entry.py            # CLI to start OrchestratorAgent server
+│       ├── orchestrator.py     # LLM router + TaskManager for OrchestratorAgent
+│       └── agent_connect.py    # Helper to call child A2A agents
+├── server/
+│   ├── server.py               # A2A JSON-RPC server implementation
+│   └── task_manager.py         # Base in-memory task manager interface
+└── utilities/
+    ├── discovery.py            # Finds agents via `agent_registry.json`
+    └── agent_registry.json     # List of child-agent URLs (one per line)
 ```
 
 ---
 
-## 📦 Version Overview
+## 🛠️ Setup
 
-### ✅ `version_1_simple`
+1. **Clone & navigate**
 
-A beginner-friendly demo that uses Flask to create a basic A2A server agent (`TellTimeAgent`) and a client that:
+    ```bash
+    git clone https://github.com/theailanguage/a2a_samples.git
+    cd a2a_samples/version_3_multi_agent
+    ```
 
-* Fetches the agent card from the `/.well-known/agent.json` endpoint
-* Sends a simple task to `/tasks/send`
-* Receives a time-based response
+2. **Create & activate a venv**
 
-﹖→ [Explore the folder](./version_1_simple/)
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
 
-### 🚀 `version_2_adk_agent`
+3. **Install dependencies**
 
-A more advanced version using **Google's ADK (Agent Development Kit)** to implement a fully functional Gemini-powered A2A agent.
+    Using [`uv`](https://github.com/astral-sh/uv):
 
-* Integrates memory, sessions, and artifacts
-* Uses ADK runners and LLM agents
-* Structured with reusable components and aligned with A2A's JSON-RPC model
+    ```bash
+    uv pip install .
+    ```
 
-﹖→ [Explore the folder](./version_2_adk_agent/)
+    Or with pip directly:
 
-### 🌐 `version_3_multi_agent`
+    ```bash
+    pip install .
+    ```
 
-A multi-agent orchestration example demonstrating:
+4. **Set your API key**
 
-* Dynamic discovery of TellTimeAgent and GreetingAgent via a registry
-* An OrchestratorAgent that routes user queries to the appropriate child agent
-* A CLI (`cmd.py`) for seamless end-to-end testing
-
-﹖→ [Explore the folder](./version_3_multi_agent/)
-
-### 🔄 `version_4_multi_agent_mcp`
-
-A cutting-edge integration combining Google’s A2A protocol with Anthropic’s MCP (Model Context Protocol):
-
-* **A2A Protocol** – Agents discover each other via JSON-RPC and call one another’s skills.
-* **MCP Integration** – Dynamically discover and load external MCP servers, exposing each tool as a callable function.
-* **Orchestrator Agent** – A central LLM-powered router that decides whether to delegate to a child agent or invoke an MCP tool.
-* **Modular & Extensible** – Simply update a registry or config to add new A2A agents or MCP servers.
-
-﹖→ [Explore the folder](./version_4_multi_agent_mcp/)
-
-### 💡 `version_4p01_with_vision_agent`
-
-An enhanced version of `version_4_multi_agent_mcp` that adds support for a **Gemini-based VisionAgent**:
-
-* Accepts image input via local file path or URL
-* Uses Google ADK's multimodal capabilities
-* Integrates cleanly into the existing A2A and MCP architecture
-
-﹖→ [Explore the folder](./version_4p01_with_vision_agent/)
-
-### 📊 `version_5_a2a_sdk`
-
-An educational minimal setup using the official **A2A Python SDK** with LangChain + Gemini.
-
-* One agent (`TellTimeAgent`) with time tool
-* One async client
-* Streaming + multi-turn + structured response support
-* Ideal starting point for learning A2A SDK fundamentals
-
-﹖→ [Explore the folder](./version_5_a2a_sdk/)
-
-### 🚀 `version_6_docker_vision_agent`
-
-A production-style deployment of a Gemini-based VisionAgent in a Docker container:
-
-* Fully Dockerized architecture for isolated builds
-* Local testing using `curl` to hit the vision agent endpoint
-* One-line deployment to **Google Cloud Run**
-* Supports volume-mounted images + container-path resolution
-
-﹖→ [Explore the folder](./version_6_docker_vision_agent/)
+    Create `.env` at the project root:
+    ```bash
+    echo "GOOGLE_API_KEY=your_api_key_here" > .env
+    ```
 
 ---
 
-## 🧪 Running the Code
+## 🎬 Demo Walkthrough
 
-Each version contains its own `README.md` file with detailed instructions on:
+**Start the TellTimeAgent**
+```bash
+python3 -m agents.tell_time_agent \
+  --host localhost --port 10000
+```
 
-* Setting up Python environments
-* Installing dependencies
-* Running the server and client
+**Start the GreetingAgent**
+```bash
+python3 -m agents.greeting_agent \
+  --host localhost --port 10001
+```
 
-Make sure to check the respective version folder before you begin!
+**Start the Orchestrator (Host) Agent**
+```bash
+python3 -m agents.host_agent.entry \
+  --host localhost --port 10002
+```
+
+**Launch the CLI (cmd.py)**
+```bash
+python3 -m app.cmd.cmd --agent http://localhost:10002
+```
+
+**Try it out!**
+```bash
+> What time is it?
+Agent says: The current time is: 2025-05-05 14:23:10
+
+> Greet me
+Agent says: Good afternoon, friend! The golden sun dips low...
+```
 
 ---
 
-## 🛠 Future Plans
+## 🔍 How It Works
 
-* Add streaming support via SSE and `tasks/sendSubscribe`
-* Add push notification samples
-* Add more ADK agent variants with different skills
-
-Stay tuned and ⭐ star the repo if you find it useful!
-
----
-
-## 📜 License
-
-This repository is licensed under the **GNU General Public License v3.0**.
-See the [LICENSE](./LICENSE) file for full details.
+1. **Discovery**: OrchestratorAgent reads `utilities/agent_registry.json`, fetches each agent’s `/​.well-known/agent.json`.
+2. **Routing**: Based on intent, the Orchestrator’s LLM calls its tools:
+   - `list_agents()` → lists child-agent names
+   - `delegate_task(agent_name, message)` → forwards tasks
+3. **Child Agents**:
+   - TellTimeAgent returns the current time.
+   - GreetingAgent calls TellTimeAgent then crafts a poetic greeting.
+4. **JSON-RPC**: All communication uses A2A JSON-RPC 2.0 over HTTP via Starlette & Uvicorn.
 
 ---
 
-Happy building with A2A! 🛠
+## 📖 Learn More
+
+- A2A GitHub: https://github.com/google/A2A  
+- Google ADK: https://github.com/google/agent-development-kit
