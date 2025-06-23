@@ -19,4 +19,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 10000
 
 # Run the host agent with registry from environment variable
-CMD ["python", "-m", "agents.host_agent.entry", "--host", "0.0.0.0", "--port", "10000", "--registry", "$REGISTRY"] 
+CMD ["python", "-m", "agents.host_agent.entry", "--host", "0.0.0.0", "--port", "10000"] 

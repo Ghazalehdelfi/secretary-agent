@@ -208,42 +208,90 @@ class OrchestratorAgent:
 
 class OrchestratorTaskManager(InMemoryTaskManager):
     """
-    🪄 TaskManager wrapper: exposes OrchestratorAgent.invoke() over the
-    A2A JSON-RPC `tasks/send` endpoint, handling in-memory storage and
-    response formatting.
+    🪄 OrchestratorTaskManager: A2A task manager for the orchestrator agent.
+    
+    This class extends InMemoryTaskManager to provide A2A JSON-RPC protocol
+    support for the OrchestratorAgent. It handles incoming task requests,
+    delegates them to the orchestrator agent for processing, and manages
+    the task lifecycle including storage and response formatting.
+    
+    The task manager integrates the OrchestratorAgent's LLM-based routing
+    logic with the A2A protocol, enabling the orchestrator to receive
+    requests via JSON-RPC and delegate them to appropriate child agents.
+    
+    Attributes:
+        agent (OrchestratorAgent): The orchestrator agent instance
     """
+    
     def __init__(self, agent: OrchestratorAgent):
+        """
+        Initialize the OrchestratorTaskManager with an orchestrator agent.
+        
+        Args:
+            agent (OrchestratorAgent): The orchestrator agent to delegate tasks to
+        """
         super().__init__()       # Initialize base in-memory storage
         self.agent = agent       # Store our orchestrator logic
 
     def _get_user_text(self, request: SendTaskRequest) -> str:
         """
-        Helper: extract the user's raw input text from the request object.
+        Extract the user's raw input text from the A2A request object.
+        
+        This helper method extracts the text content from the first part
+        of the user's message in the request.
+        
+        Args:
+            request (SendTaskRequest): The incoming A2A task request
+            
+        Returns:
+            str: The user's input text
+            
+        Raises:
+            IndexError: If the message has no parts
         """
         return request.params.message.parts[0].text
 
     async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:
         """
-        Called by the A2A server when a new task arrives:
-        1. Store the incoming user message
-        2. Invoke the OrchestratorAgent to get a response
-        3. Append response to history, mark completed
-        4. Return a SendTaskResponse with the full Task
+        Handle incoming A2A task requests by delegating to the orchestrator agent.
+        
+        This method is called by the A2A server when a new task arrives. It:
+        1. Stores the incoming user message in the task history
+        2. Invokes the OrchestratorAgent to process the request and route to child agents
+        3. Appends the orchestrator's response to the task history
+        4. Marks the task as completed
+        5. Returns a structured SendTaskResponse with the full task information
+        
+        The orchestrator agent uses its LLM to determine which child agent
+        should handle the request and delegates accordingly.
+        
+        Args:
+            request (SendTaskRequest): The incoming A2A task request containing
+                the user's message and session information
+                
+        Returns:
+            SendTaskResponse: Response containing the completed task with
+                both user input and agent response in the history
+                
+        Example:
+            The orchestrator might receive a request like "What time is it?"
+            and delegate it to a time agent, then return the time agent's
+            response as part of the task history.
         """
         logger.info(f"OrchestratorTaskManager received task {request.params.id}")
 
-        # Step 1: save the initial message
+        # Step 1: Save the initial user message to task history
         task = await self.upsert_task(request.params)
 
-        # Step 2: run orchestration logic
+        # Step 2: Extract user text and run orchestration logic
         user_text = self._get_user_text(request)
         response_text = await self.agent.invoke(user_text, request.params.sessionId)
 
-        # Step 3: wrap the LLM output into a Message
+        # Step 3: Wrap the LLM output into a Message and add to history
         reply = Message(role="agent", parts=[TextPart(text=response_text)])
         async with self.lock:
             task.status = TaskStatus(state=TaskState.COMPLETED)
             task.history.append(reply)
 
-        # Step 4: return structured response
+        # Step 4: Return structured response with complete task information
         return SendTaskResponse(id=request.id, result=task)

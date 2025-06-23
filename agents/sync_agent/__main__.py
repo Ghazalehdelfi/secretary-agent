@@ -1,6 +1,6 @@
 import logging                        
 import click                          
-
+import os
 from server.server import A2AServer    
 from models.agent import (
     AgentCard,                        
@@ -31,14 +31,7 @@ logger = logging.getLogger(__name__)
     default="Alex Farner",
     help="User's full name"
 )
-@click.option(
-    "--registry",
-    default="",
-    help=(
-        "array of child-agent URLs"
-    )
-)
-def main(host: str, port: int, user: str, registry: str):
+def main(host: str, port: int, user: str):
     """
     Launches the sync_agent A2A server.
 
@@ -70,6 +63,7 @@ def main(host: str, port: int, user: str, registry: str):
         skills=[skill]
     )
 
+    registry = os.getenv("REGISTRY")
     registry = registry.split("+")
     session_db = Session()
     email_service = EmailService(user, session_db)

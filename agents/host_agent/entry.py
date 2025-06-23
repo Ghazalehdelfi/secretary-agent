@@ -10,7 +10,7 @@
 import asyncio                              # Built-in for running async coroutines
 import logging                              # Standard Python logging module
 import click                                # Library for building CLI interfaces
-
+import os
 # Utility for discovering remote A2A agents from a local registry
 from utilities.discovery import DiscoveryClient
 # Shared A2A server implementation (Starlette + JSON-RPC)
@@ -37,14 +37,7 @@ logger = logging.getLogger(__name__)
     "--port", default=10002,
     help="Port for the OrchestratorAgent server"
 )
-@click.option(
-    "--registry",
-    default="",
-    help=(
-        "array of child-agent URLs"
-    )
-)
-def main(host: str, port: int, registry: str):
+def main(host: str, port: int):
     """
     Entry point to start the OrchestratorAgent A2A server.
 
@@ -55,6 +48,7 @@ def main(host: str, port: int, registry: str):
     4. Wrap it in an OrchestratorTaskManager for JSON-RPC handling.
     5. Launch the A2AServer to listen for incoming tasks.
     """
+    registry = os.getenv("REGISTRY")
     registry = registry.split("+")
     print(registry)
     # 1) Discover all registered child agents from the registry file

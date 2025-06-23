@@ -132,8 +132,8 @@ deploy_to_cloud_run() {
         --cpu=1 \
         --set-env-vars="PYTHONPATH=/app,PYTHONUNBUFFERED=1" \
         --set-secrets="GOOGLE_API_KEY=GOOGLE_API_KEY:latest,SERVICE_EMAIL=SERVICE_EMAIL:latest,SERVICE_PASSWORD=SERVICE_PASSWORD:latest,SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest,service-creds=service-creds:latest" \
-        --max-instances=10 \
-        --min-instances=0
+        --max-instances=1 \
+        --min-instances=1
     
     # Deploy sync agent with calendar agent URL in registry
     print_status "Deploying sync agent..."
@@ -148,8 +148,8 @@ deploy_to_cloud_run() {
         --set-env-vars="PYTHONPATH=/app,PYTHONUNBUFFERED=1" \
         --set-env-vars="REGISTRY=https://a2a-calendar-agent-695627813996.us-central1.run.app" \
         --set-secrets="GOOGLE_API_KEY=GOOGLE_API_KEY:latest,SERVICE_EMAIL=SERVICE_EMAIL:latest,SERVICE_PASSWORD=SERVICE_PASSWORD:latest,SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest,service-creds=service-creds:latest" \
-        --max-instances=10 \
-        --min-instances=0
+        --max-instances=1 \
+        --min-instances=1
     
     # Deploy host agent with both calendar and sync agent URLs in registry
     print_status "Deploying host agent..."
@@ -164,8 +164,8 @@ deploy_to_cloud_run() {
         --set-env-vars="PYTHONPATH=/app,PYTHONUNBUFFERED=1" \
         --set-env-vars="REGISTRY=https://a2a-calendar-agent-695627813996.us-central1.run.app+https://a2a-sync-agent-695627813996.us-central1.run.app" \
         --set-secrets="GOOGLE_API_KEY=GOOGLE_API_KEY:latest,SERVICE_EMAIL=SERVICE_EMAIL:latest,SERVICE_PASSWORD=SERVICE_PASSWORD:latest,SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest" \
-        --max-instances=10 \
-        --min-instances=0
+        --max-instances=1 \
+        --min-instances=1
     
     print_success "All services deployed successfully!"
 }
