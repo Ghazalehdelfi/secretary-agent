@@ -40,7 +40,8 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools.tool_context import ToolContext
 # ToolContext: passed to tool functions for state and actions
 
-from google.genai import types           
+from google.genai import types  
+from google.adk.tools.function_tool import FunctionTool
 # types.Content & types.Part: used to wrap user messages for the LLM
 
 # -----------------------------------------------------------------------------
@@ -108,68 +109,45 @@ class OrchestratorAgent:
         - System instruction callback
         - Available tool functions
         """
+        def list_agents() -> list[str]:
+            return list(self.connectors.keys())
+        
+        async def delegate_task(agent_name: str, message: str, tool_context: ToolContext) -> str:
+            if agent_name not in self.connectors:
+                raise ValueError(f"Unknown agent: {agent_name}")
+            connector = self.connectors[agent_name]
+
+            # Ensure session_id persists across tool calls via tool_context.state
+            state = tool_context.state
+            if "session_id" not in state:
+                state["session_id"] = str(uuid.uuid4())
+            session_id = state["session_id"]
+
+            # Delegate task asynchronously and await Task result
+            child_task = await connector.send_task(message, session_id)
+
+            # Extract text from the last history entry if available
+            if child_task.history and len(child_task.history) > 1:
+                return child_task.history[-1].parts[0].text
+            return ""
+        
+        system_instr = f"""
+            You are an orchestrator agent. You will be asked to delegate a task to a child agent.
+            You have two tools:
+            1) list_agents() -> list available child agents
+            2) delegate_task(agent_name, message) -> call that agent
+        """
+
         return LlmAgent(
-            model="gemini-1.5-flash-latest",    # Specify Gemini model version
+            model="gemini-2.5-flash",    # Specify Gemini model version
             name="orchestrator_agent",          # Human identifier for this agent
             description="Delegates user queries to child A2A agents based on intent.",
-            instruction=self._root_instruction,  # Function providing system prompt text
+            instruction=system_instr,  # Function providing system prompt text
             tools=[
-                self._list_agents,               # Tool 1: list available child agents
-                self._delegate_task             # Tool 2: call a child agent
+                FunctionTool(list_agents),               # Tool 1: list available child agents
+                FunctionTool(delegate_task)             # Tool 2: call a child agent
             ],
         )
-
-    def _root_instruction(self, context: ReadonlyContext) -> str:
-        """
-        System prompt function: returns instruction text for the LLM,
-        including which tools it can use and a list of child agents.
-        """
-        # Build a bullet-list of agent names
-        agent_list = "\n".join(f"- {name}" for name in self.connectors)
-        return (
-            "You are an orchestrator with two tools:\n"
-            "1) list_agents() -> list available child agents\n"
-            "2) delegate_task(agent_name, message) -> call that agent\n"
-            "Use these tools to satisfy the user. Do not hallucinate.\n"
-            "Available agents:\n" + agent_list
-        )
-
-    def _list_agents(self) -> list[str]:
-        """
-        Tool function: returns the list of child-agent names currently registered.
-        Called by the LLM when it wants to discover available agents.
-        """
-        return list(self.connectors.keys())
-
-    async def _delegate_task(
-        self,
-        agent_name: str,
-        message: str,
-        tool_context: ToolContext
-    ) -> str:
-        """
-        Tool function: forwards the `message` to the specified child agent
-        (via its AgentConnector), waits for the response, and returns the
-        text of the last reply.
-        """
-        # Validate agent_name exists
-        if agent_name not in self.connectors:
-            raise ValueError(f"Unknown agent: {agent_name}")
-        connector = self.connectors[agent_name]
-
-        # Ensure session_id persists across tool calls via tool_context.state
-        state = tool_context.state
-        if "session_id" not in state:
-            state["session_id"] = str(uuid.uuid4())
-        session_id = state["session_id"]
-
-        # Delegate task asynchronously and await Task result
-        child_task = await connector.send_task(message, session_id)
-
-        # Extract text from the last history entry if available
-        if child_task.history and len(child_task.history) > 1:
-            return child_task.history[-1].parts[0].text
-        return ""
 
     async def invoke(self, query: str, session_id: str) -> str:
         """

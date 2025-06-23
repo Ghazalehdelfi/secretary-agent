@@ -43,7 +43,7 @@ class AgentConnector:
         # Log that the connector is ready for use
         logger.info(f"AgentConnector: initialized for {self.name} at {base_url}")
 
-    async def send_task(self, message: str, session_id: str) -> Task:
+    async def send_task(self, message: str, session_id: str, role: str = "") -> Task:
         """
         Send a text task to the remote agent and return its completed Task.
 
@@ -65,6 +65,9 @@ class AgentConnector:
                 "parts": [                       # Wrap the text in a list of parts
                     {"type": "text", "text": message}
                 ]
+            },
+            "metadata": {
+                "agent_role": role
             }
         }
 

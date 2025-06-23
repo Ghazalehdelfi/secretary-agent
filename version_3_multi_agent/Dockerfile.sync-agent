@@ -1,0 +1,22 @@
+# Dockerfile for Sync Agent
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire application
+COPY . .
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Expose the port
+EXPOSE 10002
+
+# Run the sync agent with registry from environment variable
+CMD ["python", "-m", "agents.sync_agent", "--host", "0.0.0.0", "--port", "10002", "--registry", "$REGISTRY", "--user", "Alex Farner"] 

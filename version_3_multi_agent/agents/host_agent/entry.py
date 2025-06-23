@@ -39,10 +39,9 @@ logger = logging.getLogger(__name__)
 )
 @click.option(
     "--registry",
-    default=None,
+    default="",
     help=(
-        "Path to JSON file listing child-agent URLs. "
-        "Defaults to utilities/agent_registry.json"
+        "array of child-agent URLs"
     )
 )
 def main(host: str, port: int, registry: str):
@@ -56,8 +55,10 @@ def main(host: str, port: int, registry: str):
     4. Wrap it in an OrchestratorTaskManager for JSON-RPC handling.
     5. Launch the A2AServer to listen for incoming tasks.
     """
+    registry = registry.split("+")
+    print(registry)
     # 1) Discover all registered child agents from the registry file
-    discovery = DiscoveryClient(registry_file=registry)
+    discovery = DiscoveryClient(registry=registry)
     # Run the async discovery synchronously at startup
     agent_cards = asyncio.run(discovery.list_agent_cards())
 
@@ -74,7 +75,7 @@ def main(host: str, port: int, registry: str):
         name="Orchestrate Tasks",                  # Human-friendly name
         description=(
             "Routes user requests to the appropriate child agent, "
-            "based on intent (time, greeting, etc.)"
+            "based on intent"
         ),
         tags=["routing", "orchestration"],       # Keywords to aid discovery
         examples=[                                  # Sample user queries
@@ -86,7 +87,7 @@ def main(host: str, port: int, registry: str):
     orchestrator_card = AgentCard(
         name="OrchestratorAgent",
         description="Delegates tasks to discovered child agents",
-        url=f"http://{host}:{port}/",             # Public endpoint
+        url=f"https://a2a-host-agent-695627813996.us-central1.run.app/",             # Public endpoint
         version="1.0.0",
         defaultInputModes=["text"],                # Supported input modes
         defaultOutputModes=["text"],               # Supported output modes

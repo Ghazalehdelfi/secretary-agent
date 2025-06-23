@@ -22,7 +22,9 @@
 from abc import ABC, abstractmethod        # Lets us define abstract base classes (like an interface)
 from typing import Dict                    # Dict is a dictionary type for storing key-value pairs
 import asyncio                             # Used here for locks to safely handle concurrency (async operations)
+import logging                             # Used for logging
 
+logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 # 📦 Project Imports: Request and Task Models
@@ -35,9 +37,8 @@ from models.request import (
 
 from models.task import (
     Task, TaskSendParams, TaskQueryParams,  # Task and input models
-    TaskStatus, TaskState, Message          # Task metadata and history objects
+    TaskStatus, TaskState, Message, TextPart          # Task metadata and history objects
 )
-
 
 # -----------------------------------------------------------------------------
 # 🧩 TaskManager (Abstract Base Class)
@@ -90,7 +91,7 @@ class InMemoryTaskManager(TaskManager):
     # -------------------------------------------------------------------------
     async def upsert_task(self, params: TaskSendParams) -> Task:
         """
-        Create a new task if it doesn’t exist, or update the history if it does.
+        Create a new task if it doesn't exist, or update the history if it does.
 
         Args:
             params: TaskSendParams – includes task ID, session ID, and message
@@ -157,3 +158,36 @@ class InMemoryTaskManager(TaskManager):
                 task_copy.history = task_copy.history
 
             return GetTaskResponse(id=request.id, result=task_copy)
+
+
+
+class AgentTaskManager(InMemoryTaskManager):
+    def __init__(self, agent):
+        super().__init__()
+        self.agent = agent
+
+    def _get_user_text(self, request: SendTaskRequest) -> str:
+        return request.params.message.parts[0].text
+
+    async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:
+        logger.info(f"{self.agent.agent_name} task manager received task {request.params.id}")
+
+        task = await self.upsert_task(request.params)
+
+        user_text = self._get_user_text(request)
+
+        agent_response = await self.agent.invoke(
+            user_text,
+            request.params.sessionId
+        )
+
+        reply_message = Message(
+            role="agent",
+            parts=[TextPart(text=agent_response)]
+        )
+
+        async with self.lock:
+            task.status = TaskStatus(state=TaskState.COMPLETED)
+            task.history.append(reply_message)
+
+        return SendTaskResponse(id=request.id, result=task)

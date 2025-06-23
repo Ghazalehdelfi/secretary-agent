@@ -1,0 +1,22 @@
+# Dockerfile for Calendar Agent
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire application
+COPY . .
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Expose the port
+EXPOSE 10001
+
+# Run the calendar agent
+CMD ["python", "-m", "agents.calendar_agent", "--host", "0.0.0.0", "--port", "10001", "--user", "Alex Farner", "--user_email", "alex.farner93@gmail.com"] 
